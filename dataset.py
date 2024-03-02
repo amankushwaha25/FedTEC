@@ -6,7 +6,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Download CIFAR-10 dataset
-def data_generator():
+def data_generator(num_clients=2):
+    """
+    The function downloads the CIFAR10 dataset and splits the 
+    dataset into number of clients
+
+    Parameter:
+        num_client : (int)
+        concentration param : (float) to be decided 
+    returns: list of splitted dataset
+    """
+
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -16,7 +26,7 @@ def data_generator():
                                             download=True, transform=transform)
 
     # Define number of clients and labels
-    num_clients = 10
+    
     num_labels = len(trainset.classes)
 
     print(f"Number of labels: {num_labels}")
@@ -25,6 +35,7 @@ def data_generator():
     dirichlet_distribution = torch.distributions.dirichlet.Dirichlet(torch.ones(num_labels))
     client_label_distributions = dirichlet_distribution.sample(torch.Size([num_clients]))
 
+    
     print(f"concentration parameters : {dirichlet_distribution.concentration}")
     print(f"tensror: {torch.ones(num_labels)}")
     print(f"client label distribution: {client_label_distributions}")
@@ -70,3 +81,5 @@ def data_generator():
 
 #     plt.show()
 
+if __name__ == "__main__":
+    data_generator(2)
