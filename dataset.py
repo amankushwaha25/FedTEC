@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Download CIFAR-10 dataset
-def data_generator(num_clients=2):
+def data_generator(num_clients = 2):
     """
     The function downloads the CIFAR10 dataset and splits the 
     dataset into number of clients
