@@ -29,16 +29,16 @@ def data_generator(num_clients = 2):
     
     num_labels = len(trainset.classes)
 
-    print(f"Number of labels: {num_labels}")
+    # print(f"Number of labels: {num_labels}")
 
     # Generate distribution for each client
     dirichlet_distribution = torch.distributions.dirichlet.Dirichlet(torch.ones(num_labels))
     client_label_distributions = dirichlet_distribution.sample(torch.Size([num_clients]))
 
     
-    print(f"concentration parameters : {dirichlet_distribution.concentration}")
-    print(f"tensror: {torch.ones(num_labels)}")
-    print(f"client label distribution: {client_label_distributions}")
+    # print(f"concentration parameters : {dirichlet_distribution.concentration}")
+    # print(f"tensror: {torch.ones(num_labels)}")
+    # print(f"client label distribution: {client_label_distributions}")
 
     # Split dataset based on client labels
     client_datasets = []
@@ -51,7 +51,7 @@ def data_generator(num_clients = 2):
     # Create data loaders for each client dataset
     client_loaders = []
     for dataset in client_datasets:
-        loader = DataLoader(dataset, shuffle=True, num_workers=2)
+        loader = DataLoader(dataset, shuffle=True, num_workers=2, batch_size=32)
         client_loaders.append(loader)
 
     return client_loaders
@@ -81,5 +81,5 @@ def data_generator(num_clients = 2):
 
 #     plt.show()
 
-if __name__ == "__main__":
-    data_generator(2)
+# if __name__ == "__main__":
+#     data_generator(2)
