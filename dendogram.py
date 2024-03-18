@@ -14,18 +14,18 @@ def generate_cluster(data, round, threshold = 0.015, save_image = False, save_in
         Return: 
         A dictionary having cluster names as key and values are the client names.
     """
-    data = [
-        ('client_0', 'client_1', 0.002697513),
-        ('client_0', 'client_2', -0.0002878192),
-        ('client_0', 'client_3', 0.001900201),
-        ('client_0', 'client_4', -0.008431232),
-        ('client_1', 'client_2', -0.00040878973),
-        ('client_1', 'client_3', 0.0021052486),
-        ('client_1', 'client_4', -0.0025824648),
-        ('client_2', 'client_3', 0.0041731466),
-        ('client_2', 'client_4', -0.010167966),
-        ('client_3', 'client_4', -0.0029476644)
-    ]
+    # data = [
+    #     ('client_0', 'client_1', 0.002697513),
+    #     ('client_0', 'client_2', -0.0002878192),
+    #     ('client_0', 'client_3', 0.001900201),
+    #     ('client_0', 'client_4', -0.008431232),
+    #     ('client_1', 'client_2', -0.00040878973),
+    #     ('client_1', 'client_3', 0.0021052486),
+    #     ('client_1', 'client_4', -0.0025824648),
+    #     ('client_2', 'client_3', 0.0041731466),
+    #     ('client_2', 'client_4', -0.010167966),
+    #     ('client_3', 'client_4', -0.0029476644)
+    # ]
 
     # Extracting unique clients
     clients = sorted(set([item[0] for item in data] + [item[1] for item in data]))

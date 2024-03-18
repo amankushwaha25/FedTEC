@@ -11,6 +11,7 @@ import warnings
 from itertools import combinations
 from dendogram import generate_cluster
 warnings.filterwarnings("ignore")
+import time
 # %tensorboard --logdir=./runs1
 class client():
     '''
@@ -28,7 +29,7 @@ class client():
         self.dataset = None
 
     def localTransferLearning(self, global_epoch):
-        resnet18Training(self.net, self.dataset,self.lr, self.epochs, self.name, global_epoch)
+        return resnet18Training(self.net, self.dataset,self.lr, self.epochs, self.name, global_epoch)
         
     def saveModel(self, global_epoch):
         if not os.path.exists(f"./models/global_epoch{global_epoch}"):
@@ -50,7 +51,10 @@ class server():
         self.record = {}
 
     def similarity_function(self, global_epoch):
-        self.record = { client.name : client.net for client in self.clients}
+       
+        self.record = { client.name : client for client in self.clients}
+        print(self.record)
+        time.sleep(10)
         datasets = data_generator(num_clients=500)
         path = f"./models/global_epoch{global_epoch}"
 
@@ -77,11 +81,18 @@ class server():
     def average(self):
         for _ , cluster_mem in self.clusters.items():
             average_model = {}
+            # Initialize average_model with keys from the first member
+            for key, value in self.record[cluster_mem[0]].net.state_dict().items():
+                average_model[key] = torch.zeros_like(value)
+    
+            # Accumulate weighted sum of parameters
             for key in average_model:
-                weighted_sum = sum(self.record[member].state_dict()[key] for member in cluster_mem)
+                weighted_sum = sum(self.record[member].net.state_dict()[key] for member in cluster_mem)
                 average_model[key] = weighted_sum / len(cluster_mem)
+    
             for member in cluster_mem:
                 self.record[member].net.load_state_dict(average_model)
+                print(self.record[member].net.state_dict())
 
         
         
@@ -94,10 +105,13 @@ if __name__ == "__main__":
     
     num_clients = 2     #command line argument 
     lr = 0.01           #command line argument
-    local_epochs = 2   #command line argument
+    local_epochs = 1   #command line argument
     global_epoch = 0
     server = server(num_clients, lr, local_epochs)
-
+    for client in server.clients:
+        print(client.name)
+    
+    
     # generate the data for the clinet according to the dirichlet distribution
     client_data_list = data_generator(num_clients)
 
@@ -112,8 +126,9 @@ if __name__ == "__main__":
         server.similarity_function(global_epoch)
         server.average()
         global_epoch += 1
-        print(f"completed global epoch {global_epoch}")
-        
+        print(f"**************************************************completed global epoch {global_epoch} \
+              **************************************************")
     
+    print("**************************************************Completed federated learning**************************************************")
   
    

@@ -9,7 +9,7 @@ import os
 def resnet18Training(mentee_model, dataset, lr, epochs, client_name, global_epoch):
     if os.path.isdir(f"./runs/global_epoch{global_epoch}/{client_name}") == False:
         os.makedirs(f"./runs/global_epoch{global_epoch}/{client_name}")
-    writer = SummaryWriter(log_dir=f"./runs2/{client_name}")
+    writer = SummaryWriter(log_dir=f"./runs/global_epoch{global_epoch}/{client_name}")
     resnet18 = models.resnet18(pretrained=True)
 
     for param in resnet18.parameters():
