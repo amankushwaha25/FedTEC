@@ -1,5 +1,5 @@
 import torch
-import torchvision
+from torchvision import models
 from model import model
 from torch.utils.tensorboard import SummaryWriter
 from transfer_learning import resnet18Training
@@ -27,9 +27,10 @@ class client():
         self.epochs = epochs
         self.lr = lr
         self.dataset = None
+        self.teacher = models.resnet18(pretrained=True)
 
     def localTransferLearning(self, global_epoch):
-        return resnet18Training(self.net, self.dataset,self.lr, self.epochs, self.name, global_epoch)
+        return resnet18Training(self.net, self.teacher, self.dataset,self.lr, self.epochs, self.name, global_epoch)
         
     def saveModel(self, global_epoch):
         if not os.path.exists(f"./models/global_epoch{global_epoch}"):
@@ -103,16 +104,13 @@ def train_client(client):
 
 if __name__ == "__main__":
     
-    num_clients = 10    #command line argument 
+    num_clients = 2    #command line argument 
     lr = 0.01           #command line argument
-    local_epochs =  10  #command line argument
+    local_epochs =  1  #command line argument
     global_epoch = 0
-    max_global_epoch = 50
+    max_global_epoch = 1
     server = server(num_clients, lr, local_epochs)
-    # for client in server.clients:
-    #     print(client.name)
-    
-    
+   
     # generate the data for the clinet according to the dirichlet distribution
     client_data_list = data_generator(num_clients)
 
@@ -122,7 +120,9 @@ if __name__ == "__main__":
     # actual training -> needs improvement
     while global_epoch != max_global_epoch:
         for client in server.clients:
-            client.net.load_state_dict(client.localTransferLearning(global_epoch))
+            updated_client_model, updated_teacher_model  = client.localTransferLearning(global_epoch)
+            client.net.load_state_dict(updated_client_model)
+            client.teacher.load_state_dict(updated_teacher_model)
             client.saveModel(global_epoch)
         server.similarity_function(global_epoch)
         server.average()

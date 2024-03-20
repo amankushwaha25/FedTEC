@@ -6,29 +6,27 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 import os
 
-def resnet18Training(mentee_model, dataset, lr, epochs, client_name, global_epoch):
+def resnet18Training(mentee_model, teacher, dataset, lr, epochs, client_name, global_epoch):
     if os.path.isdir(f"./runs/global_epoch{global_epoch}/{client_name}") == False:
         os.makedirs(f"./runs/global_epoch{global_epoch}/{client_name}")
     writer = SummaryWriter(log_dir=f"./runs/global_epoch{global_epoch}/{client_name}")
-    resnet18 = models.resnet18(pretrained=True)
+    # resnet18 = models.resnet18(pretrained=True)
+    
+    teacher.train()
+    mentee_model.train()
 
-    for param in resnet18.parameters():
+    for param in teacher.parameters():
         param.requires_grad = False
 
-    num_ftrs = resnet18.fc.in_features
-    resnet18.fc = nn.Linear(num_ftrs, 10)
-
-    mentee_model.train()
+    num_ftrs = teacher.fc.in_features
+    teacher.fc = nn.Linear(num_ftrs, 10)
     
     criterion_mentor = nn.CrossEntropyLoss()
-    optimizer_mentor = optim.SGD(resnet18.parameters(), lr= lr, momentum=0.9)
+    optimizer_mentor = optim.SGD(teacher.parameters(), lr= lr, momentum=0.9)
 
     # Define loss function and optimizer for mentee model
     criterion_mentee = nn.CrossEntropyLoss()
     optimizer_mentee = optim.SGD(mentee_model.parameters(), lr=lr, momentum=0.9)
-
-    # Initialize TensorBoard writer
-    
     
 # Training loop
 
@@ -41,7 +39,7 @@ def resnet18Training(mentee_model, dataset, lr, epochs, client_name, global_epoc
             optimizer_mentee.zero_grad()
 
             # Forward pass for mentor
-            outputs_mentor = resnet18(inputs)
+            outputs_mentor = teacher(inputs)
             loss_mentor = criterion_mentor(outputs_mentor, labels)
 
             # Forward pass for mentee
@@ -82,10 +80,11 @@ def resnet18Training(mentee_model, dataset, lr, epochs, client_name, global_epoc
                 writer.add_scalar(f'{client_name} loss', loss_mentee.item(), epoch * len(dataset) + i)
                 running_loss_mentor = 0.0
                 running_loss_mentee = 0.0
+                break
         print(f"completed epoch:{epoch} ")
     print('Finished Training')
     
-    return mentee_model.state_dict()
+    return mentee_model.state_dict(), teacher.state_dict()
 
     
     # torch.save(mentee_model.state_dict(), f"models/{client_name}.pth")
