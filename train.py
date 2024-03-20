@@ -12,6 +12,7 @@ from itertools import combinations
 from dendogram import generate_cluster
 warnings.filterwarnings("ignore")
 import time
+import concurrent.futures
 # %tensorboard --logdir=./runs1
 class client():
     '''
@@ -98,17 +99,21 @@ class server():
         
         
 # helper function for threads
-def train_client(client):
-    client.localTransferLearning()
-    client.saveModel()
+def train_client(client, global_epoch):
+    print(f"Training client {client.name}...")
+    updated_client_model, updated_teacher_model = client.localTransferLearning(global_epoch)
+    client.net.load_state_dict(updated_client_model)
+    client.teacher.load_state_dict(updated_teacher_model)
+    client.saveModel(global_epoch)
+    print(f"Client {client.name} training completed.")
 
 if __name__ == "__main__":
     
-    num_clients = 2    #command line argument 
+    num_clients = 3    #command line argument 
     lr = 0.01           #command line argument
-    local_epochs =  1  #command line argument
+    local_epochs =  2  #command line argument
     global_epoch = 0
-    max_global_epoch = 1
+    max_global_epoch = 2
     server = server(num_clients, lr, local_epochs)
    
     # generate the data for the clinet according to the dirichlet distribution
@@ -119,11 +124,15 @@ if __name__ == "__main__":
     
     # actual training -> needs improvement
     while global_epoch != max_global_epoch:
-        for client in server.clients:
-            updated_client_model, updated_teacher_model  = client.localTransferLearning(global_epoch)
-            client.net.load_state_dict(updated_client_model)
-            client.teacher.load_state_dict(updated_teacher_model)
-            client.saveModel(global_epoch)
+        # for client in server.clients:
+        #     updated_client_model, updated_teacher_model  = client.localTransferLearning(global_epoch)
+        #     client.net.load_state_dict(updated_client_model)
+        #     client.teacher.load_state_dict(updated_teacher_model)
+        #     client.saveModel(global_epoch)
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [executor.submit(train_client, client, global_epoch) for client in server.clients]
+            # Wait for all futures to complete
+            concurrent.futures.wait(futures)
         server.similarity_function(global_epoch)
         server.average()
         global_epoch += 1
