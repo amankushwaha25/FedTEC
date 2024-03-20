@@ -53,7 +53,7 @@ class server():
     def similarity_function(self, global_epoch):
        
         self.record = { client.name : client for client in self.clients}
-        print(self.record)
+        # print(self.record)
         time.sleep(10)
         datasets = data_generator(num_clients=500)
         path = f"./models/global_epoch{global_epoch}"
@@ -92,7 +92,7 @@ class server():
     
             for member in cluster_mem:
                 self.record[member].net.load_state_dict(average_model)
-                print(self.record[member].net.state_dict())
+                # print(self.record[member].net.state_dict())
 
         
         
@@ -103,13 +103,14 @@ def train_client(client):
 
 if __name__ == "__main__":
     
-    num_clients = 2     #command line argument 
+    num_clients = 10    #command line argument 
     lr = 0.01           #command line argument
-    local_epochs = 1   #command line argument
+    local_epochs =  10  #command line argument
     global_epoch = 0
+    max_global_epoch = 50
     server = server(num_clients, lr, local_epochs)
-    for client in server.clients:
-        print(client.name)
+    # for client in server.clients:
+    #     print(client.name)
     
     
     # generate the data for the clinet according to the dirichlet distribution
@@ -119,7 +120,7 @@ if __name__ == "__main__":
         client.dataset = client_data_list[i]
     
     # actual training -> needs improvement
-    while global_epoch != 2:
+    while global_epoch != max_global_epoch:
         for client in server.clients:
             client.net.load_state_dict(client.localTransferLearning(global_epoch))
             client.saveModel(global_epoch)
