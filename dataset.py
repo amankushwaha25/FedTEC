@@ -4,43 +4,39 @@ from torchvision import transforms
 from torch.utils.data import Subset, DataLoader
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
-# Download CIFAR-10 dataset
-def data_generator(num_clients = 2):
+def data_generator(num_clients=10, alpha=0.1, datasetName = 'CIFAR10'):
     """
     The function downloads the CIFAR10 dataset and splits the 
-    dataset into number of clients
+    dataset into a number of clients based on the Dirichlet distribution.
 
-    Parameter:
-        num_client : (int)
-        concentration param : (float) to be decided 
-    returns: list of splitted dataset
+    Parameters:
+        num_clients: (int) Number of clients.
+        alpha: (float) Concentration parameter for Dirichlet distribution.
+
+    Returns:
+        List of DataLoader objects for each client's dataset.
     """
-
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
 
-    trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
+    if datasetName == 'CIFAR10':
+        trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
                                             download=True, transform=transform)
-
-    # Define number of clients and labels
+    elif datasetName == 'CIFAR100':   
+        trainset = torchvision.datasets.CIFAR100(root='./data', train=True,
+                                              download=True, transform=transform)
+    elif datasetName == 'TinyImageNet':
+        trainset = torchvision.datasets.ImageFolder(root='./data/tiny-imagenet-200/train', transform=transform)
     
     num_labels = len(trainset.classes)
 
-    # print(f"Number of labels: {num_labels}")
-
-    # Generate distribution for each client
-    dirichlet_distribution = torch.distributions.dirichlet.Dirichlet(torch.ones(num_labels))
+    # Generate distribution for each client using Dirichlet distribution
+    dirichlet_distribution = torch.distributions.dirichlet.Dirichlet(alpha * torch.ones(num_labels))
     client_label_distributions = dirichlet_distribution.sample(torch.Size([num_clients]))
-
-    
-    # print(f"concentration parameters : {dirichlet_distribution.concentration}")
-    # print(f"tensror: {torch.ones(num_labels)}")
-    # print(f"client label distribution: {client_label_distributions}")
-
-    # Split dataset based on client labels
     client_datasets = []
     for i in range(num_clients):
         label_counts = (client_label_distributions[i] * len(trainset)).int()
@@ -53,33 +49,39 @@ def data_generator(num_clients = 2):
     for dataset in client_datasets:
         loader = DataLoader(dataset, shuffle=True, num_workers=2, batch_size=32)
         client_loaders.append(loader)
-
     return client_loaders
 
+def generate_heatmap(client_loaders):
+    """
+    Generate a heatmap to visualize label quantities for each client.
 
+    Parameters:
+        client_loaders: List of DataLoader objects for each client's dataset.
 
-# def heatmap_generator(client_label_distribution, ):
-#     heatmap_matrix = client_label_distributions.numpy()
+    Returns:
+        None (Displays the heatmap).
+    """
+    # Initialize an empty numpy array to store label quantities for each client
+    num_clients = len(client_loaders)
+    num_classes = 10  # CIFAR-10 has 10 classes
+    label_quantities = np.zeros((num_clients, num_classes))
 
-#     # Plot heatmap
-#     plt.figure(figsize=(10, 6))
-#     plt.imshow(heatmap_matrix, cmap='viridis', interpolation='nearest')
+    # Calculate label quantities for each client
+    for i, loader in enumerate(client_loaders):
+        for _, labels in loader:
+            for label in labels:
+                label_quantities[i][label] += 1
 
-#     # Add labels
-#     plt.title('Label Distribution for Each Client')
-#     plt.xlabel('Class')
-#     plt.ylabel('Client')
-#     plt.colorbar(label='Probability')
+    # Create a heatmap using Seaborn
+    plt.figure(figsize=(10, 6))
+    sns.heatmap(label_quantities, annot=True, fmt='g', cmap='viridis')
+    plt.xlabel('Classes')
+    plt.ylabel('Clients')
+    plt.title('Label Quantities for Each Client')
+    plt.show()
 
-#     # Add annotations
-#     for i in range(num_clients):
-#         for j in range(num_labels):
-#             plt.text(j, i, f'{heatmap_matrix[i, j]:.2f}', ha='center', va='center', color='white')
-
-#     plt.xticks(np.arange(num_labels), range(num_labels))
-#     plt.yticks(np.arange(num_clients), range(num_clients))
-
-#     plt.show()
 
 # if __name__ == "__main__":
-#     data_generator(2)
+#    client_data = data_generator()
+#    print('done')
+#    generate_heatmap(client_data)

@@ -10,3 +10,4 @@ dendogram/
 *.pth
 *.pt
 tempModelStorage/
+runs-results for report/
