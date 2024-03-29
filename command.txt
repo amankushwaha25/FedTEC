@@ -1,0 +1,1 @@
+python train.py --num-client 10 --local-model model1 --local-epochs 5 --lr 0.01 --dataset-name CIFAR10 --alpha 0.5 
