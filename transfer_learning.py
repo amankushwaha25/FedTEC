@@ -5,88 +5,95 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 import os
-
+import csv
 def resnet18Training(mentee_model, teacher, dataset, lr, epochs, client_name, global_epoch):
-    if os.path.isdir(f"./runs/global_epoch{global_epoch}/{client_name}") == False:
-        os.makedirs(f"./runs/global_epoch{global_epoch}/{client_name}")
-    writer = SummaryWriter(log_dir=f"./runs/global_epoch{global_epoch}/{client_name}")
+    if os.path.isdir(f"./ClientLoss") == False:
+        os.makedirs(f"./ClientLoss")
+    
+    csv_file = f"./ClientLoss/{client_name}.csv"
     # resnet18 = models.resnet18(pretrained=True)
     
-    teacher.train()
-    mentee_model.train()
+    with open(csv_file, mode = 'w', newline = '') as file:
 
-    for param in teacher.parameters():
-        param.requires_grad = False
-
-    num_ftrs = teacher.fc.in_features
-    teacher.fc = nn.Linear(num_ftrs, 10)
+        writer = csv.writer(file)
+        writer.writerow(['Global Epoch', 'Local Epoch', 'Loss'])
     
-    criterion_mentor = nn.CrossEntropyLoss()
-    optimizer_mentor = optim.SGD(teacher.parameters(), lr= lr, momentum=0.9)
+        teacher.train()
+        mentee_model.train()
 
-    # Define loss function and optimizer for mentee model
-    criterion_mentee = nn.CrossEntropyLoss()
-    optimizer_mentee = optim.SGD(mentee_model.parameters(), lr=lr, momentum=0.9)
-    
-# Training loop
+        for param in teacher.parameters():
+            param.requires_grad = False
 
-    for epoch in range(epochs):
-        running_loss_mentor = 0.0
-        running_loss_mentee = 0.0
-        for i, data in enumerate(dataset, 0):
-            inputs, labels = data
-            optimizer_mentor.zero_grad()
-            optimizer_mentee.zero_grad()
+        num_ftrs = teacher.fc.in_features
+        teacher.fc = nn.Linear(num_ftrs, 10)
+        
+        criterion_mentor = nn.CrossEntropyLoss()
+        optimizer_mentor = optim.SGD(teacher.parameters(), lr= lr, momentum=0.9)
 
-            # Forward pass for mentor
-            outputs_mentor = teacher(inputs)
-            loss_mentor = criterion_mentor(outputs_mentor, labels)
+        # Define loss function and optimizer for mentee model
+        criterion_mentee = nn.CrossEntropyLoss()
+        optimizer_mentee = optim.SGD(mentee_model.parameters(), lr=lr, momentum=0.9)
+        
+        # Training loop
 
-            # Forward pass for mentee
-            outputs_mentee = mentee_model(inputs)
-            loss_mentee = criterion_mentee(outputs_mentee, labels)
+        for epoch in range(epochs):
+            running_loss_mentor = 0.0
+            running_loss_mentee = 0.0
+            for i, data in enumerate(dataset, 0):
+                inputs, labels = data
+                optimizer_mentor.zero_grad()
+                optimizer_mentee.zero_grad()
 
-            # Knowledge distillation loss
-            temperature = 5
-            soft_outputs_mentor = nn.functional.softmax(outputs_mentor / temperature, dim=1)
-            soft_outputs_mentee = nn.functional.softmax(outputs_mentee / temperature, dim=1)
-            distillation_loss = nn.functional.kl_div(soft_outputs_mentor.log(), soft_outputs_mentee, reduction='batchmean')
-            total_loss = loss_mentee + distillation_loss
+                # Forward pass for mentor
+                outputs_mentor = teacher(inputs)
+                loss_mentor = criterion_mentor(outputs_mentor, labels)
 
-            # Backward pass for mentor
-            total_loss.backward(retain_graph=True)  # Retain graph for backward pass of mentee
+                # Forward pass for mentee
+                outputs_mentee = mentee_model(inputs)
+                loss_mentee = criterion_mentee(outputs_mentee, labels)
 
-            # Backward pass for mentee
-            loss_mentee.backward()
+                # Knowledge distillation loss
+                temperature = 5
+                soft_outputs_mentor = nn.functional.softmax(outputs_mentor / temperature, dim=1)
+                soft_outputs_mentee = nn.functional.softmax(outputs_mentee / temperature, dim=1)
+                distillation_loss = nn.functional.kl_div(soft_outputs_mentor.log(), soft_outputs_mentee, reduction='batchmean')
+                total_loss = loss_mentee + distillation_loss
 
-            # Optimizer step for mentor
-            optimizer_mentor.step()
+                # Backward pass for mentor
+                total_loss.backward(retain_graph=True)  # Retain graph for backward pass of mentee
 
-            # Optimizer step for mentee
-            optimizer_mentee.step()
+                # Backward pass for mentee
+                loss_mentee.backward()
 
-            # Log loss to TensorBoard
+                # Optimizer step for mentor
+                optimizer_mentor.step()
 
-            running_loss_mentor += loss_mentor.item()
-            running_loss_mentee += loss_mentee.item()
+                # Optimizer step for mentee
+                optimizer_mentee.step()
 
-            # writer.add_scalar('mentor_training_loss', loss_mentor.item(), epoch*len(dataset)+1)
-            # writer.add_scalar(f"{client_name} loss", loss_mentee.item(), epoch*len(dataset)+1)
-    
-            if i % 100 == 99:  # Print every 100 mini-batches
-                print('[%d, %5d] mentor loss: %.3f, mentee loss: %.3f' %
-                    (epoch + 1, i + 1, running_loss_mentor / 100, running_loss_mentee / 100))
-                # writer.add_scalar('mentor_training_loss', loss_mentor.item(), epoch * len(train_loader) + i)
-                writer.add_scalar(f'{client_name} loss', loss_mentee.item(), epoch * len(dataset) + i)
-                running_loss_mentor = 0.0
-                running_loss_mentee = 0.0
-                break
-        print(f"completed epoch:{epoch} ")
-    print('Finished Training')
+                # Log loss to csv
+               
+
+                running_loss_mentor += loss_mentor.item()
+                running_loss_mentee += loss_mentee.item()
+
+                # writer.add_scalar('mentor_training_loss', loss_mentor.item(), epoch*len(dataset)+1)
+                # writer.add_scalar(f"{client_name} loss", loss_mentee.item(), epoch*len(dataset)+1)
+        
+                if i % 100 == 99:  # Print every 100 mini-batches
+                    print('[%d, %5d] mentor loss: %.3f, mentee loss: %.3f' %
+                        (epoch + 1, i + 1, running_loss_mentor / 100, running_loss_mentee / 100))
+                    # writer.add_scalar('mentor_training_loss', loss_mentor.item(), epoch * len(train_loader) + i)
+                    writer.writerow([global_epoch, epoch, loss_mentee.item()])
+                    running_loss_mentor = 0.0
+                    running_loss_mentee = 0.0
+                    break
+            print(f"completed epoch:{epoch} ")
+        print('Finished Training')
     
     return mentee_model.state_dict(), teacher.state_dict()
 
     
-    # torch.save(mentee_model.state_dict(), f"models/{client_name}.pth")
+    
 
     

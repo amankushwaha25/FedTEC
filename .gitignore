@@ -11,3 +11,4 @@ dendogram/
 *.pt
 tempModelStorage/
 runs-results for report/
+ClientLoss/

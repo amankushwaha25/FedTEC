@@ -81,7 +81,7 @@ def generate_heatmap(client_loaders):
     plt.show()
 
 
-# if __name__ == "__main__":
-#    client_data = data_generator()
-#    print('done')
+if __name__ == "__main__":
+   client_data = data_generator()
+   print('done')
 #    generate_heatmap(client_data)
